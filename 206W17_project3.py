@@ -1,3 +1,4 @@
+
 ## SI 206 Winter 2017
 ## Project 3
 ## Building on HW6, HW7 (and some previous material!)
@@ -14,7 +15,7 @@ import twitter_info # same deal as always...
 import json
 import sqlite3
 import pdb
-
+from collections import Counter
 
 ## Your name:
 ## The names of anyone you worked with on this project:
@@ -49,6 +50,7 @@ try:
 	CACHE_DICTION = json.loads(cache_contents)
 except:
 	CACHE_DICTION = {}
+	cache_file.close()
 
 # Define your function get_user_tweets here:
 
@@ -121,25 +123,37 @@ statement += 'Tweets (tweet_id INTEGER PRIMARY KEY, text TEXT, user_posted TEXT,
 cur.execute(statement)
 
 cur.execute('DROP TABLE IF EXISTS Users')
-statement = 'CREATE TABLE IF NOT EXISTS '
-statement += 'Users (user_id INTEGER PRINARY KEY,screen_name TEXT, num_favs INTEGER, description TEXT)'
+statement1 = 'CREATE TABLE IF NOT EXISTS '
+statement1 += 'Users (user_id TEXT PRIMARY KEY,screen_name TEXT, num_favs INTEGER, description TEXT)'
 
-cur.execute(statement)
+cur.execute(statement1)
 
 # inerting the TWeets Table
 
 statement = 'INSERT INTO Tweets VALUES(?,?,?,?,?)'
 
+statement2 = 'INSERT or IGNORE INTO Users VALUES(?,?,?,?)'
+
 for item in umich_tweets:
+	# tweet info
 	tweet_id = item["id"]
-	user_posted  = item["user"]["screen_name"]
-	time_posted = item["created_at"]
-	retweets = item["retweet_count"]
-	pdb.set_trace()
-	print(item.keys())
+	user_posted = item["user"]["id_str"]
 	text = item["text"]
-
-
+	retweets = item["retweet_count"]
+	time_posted = item["created_at"]
+	names = item["entities"]["user_mentions"]
+	for item in names:
+		user = api.get_user(id = item["id"])
+		screen_name = user["screen_name"]
+		num_favs = user["favourites_count"]
+		description = user["description"]
+		user_id = user["id_str"]
+	#tupleone = (tweet_id,text,user_posted,time_posted,retweets)
+		tupletwo = (user_id,screen_name,num_favs,description)
+		cur.execute(statement2,tupletwo)
+	tupleone = (tweet_id,text,user_posted,time_posted,retweets)
+	cur.execute(statement,tupleone)
+conn.commit()
 
 
 
@@ -163,21 +177,56 @@ for item in umich_tweets:
 # Make a query using an INNER JOIN to get a list of tuples with 2 elements in each tuple: the user screenname and the text of the tweet -- for each tweet that has been retweeted more than 50 times. Save the resulting list of tuples in a variable called joined_result.
 
 
+query = "SELECT * FROM Users"
+cur.execute(query)
+users_info = cur.fetchall()
+query = "SELECT screen_name FROM Users"
+#pdb.set_trace()
+cur.execute(query)
+listone = cur.fetchall()
+screen_names = [ x[0] for x in listone]
+#print(screen_names)
+
+query = "SELECT * FROM Tweets WHERE retweets>25"
+cur.execute(query)
+more_than_25_rts = cur.fetchall()
+
+query = "SELECT description FROM Users WHERE num_favs > 25"
+cur.execute(query)
+listtwo = cur.fetchall()
+
+descriptions_fav_users = [ x[0] for x in listtwo]
+
 
 
 ## Task 4 - Manipulating data with comprehensions & libraries
 
 ## Use a set comprehension to get a set of all words (combinations of characters separated by whitespace) among the descriptions in the descriptions_fav_users list. Save the resulting set in a variable called description_words.
 
-
+description_words = { y for x in descriptions_fav_users for y in x.split()}
+print(description_words)
+			     
 
 ## Use a Counter in the collections library to find the most common character among all of the descriptions in the descriptions_fav_users list. Save that most common character in a variable called most_common_char. Break any tie alphabetically (but using a Counter will do a lot of work for you...).
 
 
+cnt = Counter()
 
+for item in descriptions_fav_users:
+	listone = item.split()
+	for item in listone:
+		cnt.update(item)
+#pdb.set_trace()
+#print(cnt)
+
+most_common_char = cnt.most_common()[0][0]
+
+#print(most_common_char)
 ## Putting it all together...
 # Write code to create a dictionary whose keys are Twitter screen names and whose associated values are lists of tweet texts that that user posted. You may need to make additional queries to your database! To do this, you can use, and must use at least one of: the DefaultDict container in the collections library, a dictionary comprehension, list comprehension(s). Y
 # You should save the final dictionary in a variable called twitter_info_diction.
+
+
 
 
 
