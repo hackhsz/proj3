@@ -14,10 +14,10 @@ import tweepy
 import twitter_info # same deal as always...
 import json
 import sqlite3
-
+import pdb
 from collections import Counter
-
-## Your name:
+from collections import defaultdict
+## Your name:Shizhong Hu
 ## The names of anyone you worked with on this project:
 
 #####
@@ -50,7 +50,7 @@ try:
 	CACHE_DICTION = json.loads(cache_contents)
 except:
 	CACHE_DICTION = {}
-	cache_file.close()
+	#cache_file.close()
 
 # Define your function get_user_tweets here:
 
@@ -64,14 +64,6 @@ def get_user_tweets(handle):
 		f = open(CACHE_FNAME,'w')
 		f.write(json.dumps(CACHE_DICTION))
 		f.close()
-	tweet_texts = []
-	datareturn = []
-#	pdb.set_trace()
-	print(len(twitter_results))
-	#print(twitter_results.keys())
-	#for i in range(len(twitter_results)):
-		#tweet = twitter_results[i]
-		#datareturn.append(tweet)
 	return twitter_results
 
 # Write an invocation to the function for the "umich" user timeline and save the result in a variable called umich_tweets:
@@ -118,7 +110,7 @@ cur = conn.cursor()
 cur.execute('DROP TABLE IF EXISTS Tweets')
 
 statement = 'CREATE TABLE IF NOT EXISTS '
-statement += 'Tweets (tweet_id INTEGER PRIMARY KEY, text TEXT, user_posted TEXT, time_posted TIMESTAMP, retweets INTEGER)'
+statement += 'Tweets (tweet_id INTEGER PRIMARY KEY, text TEXT, user_id TEXT, time_posted TIMESTAMP, retweets INTEGER)'
 
 cur.execute(statement)
 
@@ -137,7 +129,7 @@ statement2 = 'INSERT or IGNORE INTO Users VALUES(?,?,?,?)'
 for item in umich_tweets:
 	# tweet info
 	tweet_id = item["id"]
-	user_posted = item["user"]["id_str"]
+	user_idu = item["user"]["id_str"]
 	text = item["text"]
 	retweets = item["retweet_count"]
 	time_posted = item["created_at"]
@@ -151,7 +143,7 @@ for item in umich_tweets:
 	#tupleone = (tweet_id,text,user_posted,time_posted,retweets)
 		tupletwo = (user_id,screen_name,num_favs,description)
 		cur.execute(statement2,tupletwo)
-	tupleone = (tweet_id,text,user_posted,time_posted,retweets)
+	tupleone = (tweet_id,text,user_idu,time_posted,retweets)
 	cur.execute(statement,tupleone)
 conn.commit()
 
@@ -177,9 +169,22 @@ conn.commit()
 # Make a query using an INNER JOIN to get a list of tuples with 2 elements in each tuple: the user screenname and the text of the tweet -- for each tweet that has been retweeted more than 50 times. Save the resulting list of tuples in a variable called joined_result.
 
 
+
+# INNER JOIN
+
+query = "SELECT Tweets.text, Users.screen_name FROM Tweets INNER JOIN Users ON Tweets.user_id = Users.user_id WHERE retweets > 5"
+
+cur.execute(query)
+
+#pdb.set_trace()
+joined_result = cur.fetchall()
+
+
+
 query = "SELECT * FROM Users"
 cur.execute(query)
 users_info = cur.fetchall()
+
 query = "SELECT screen_name FROM Users"
 #pdb.set_trace()
 cur.execute(query)
@@ -187,15 +192,20 @@ listone = cur.fetchall()
 screen_names = [ x[0] for x in listone]
 #print(screen_names)
 
-query = "SELECT * FROM Tweets WHERE retweets>25"
+query = "SELECT * FROM Tweets WHERE retweets > 5"
 cur.execute(query)
 more_than_25_rts = cur.fetchall()
 
-query = "SELECT description FROM Users WHERE num_favs > 25"
+#print(more_than_25_rts)
+
+
+query = "SELECT description FROM Users WHERE num_favs > 5"
 cur.execute(query)
 listtwo = cur.fetchall()
-
+#print(listtwo)
 descriptions_fav_users = [ x[0] for x in listtwo]
+
+
 
 
 
@@ -204,7 +214,7 @@ descriptions_fav_users = [ x[0] for x in listtwo]
 ## Use a set comprehension to get a set of all words (combinations of characters separated by whitespace) among the descriptions in the descriptions_fav_users list. Save the resulting set in a variable called description_words.
 
 description_words = { y for x in descriptions_fav_users for y in x.split()}
-print(description_words)
+#print(description_words)
 			     
 
 ## Use a Counter in the collections library to find the most common character among all of the descriptions in the descriptions_fav_users list. Save that most common character in a variable called most_common_char. Break any tie alphabetically (but using a Counter will do a lot of work for you...).
@@ -227,10 +237,22 @@ most_common_char = cnt.most_common()[0][0]
 # You should save the final dictionary in a variable called twitter_info_diction.
 
 
+query = "SELECT Tweets.text, Users.screen_name FROM Tweets INNER JOIN Users ON Tweets.user_id = Users.user_id"
+cur.execute(query)
+textname = cur.fetchall()
+#pdb.set_trace()
+#print(textname)
+
+twitter_info_dictiontemp = defaultdict(list)
+for k,v in textname:
+	twitter_info_dictiontemp[k].append(v)
+twitter_info_diction = dict(twitter_info_dictiontemp)
 
 
 
 ### IMPORTANT: MAKE SURE TO CLOSE YOUR DATABASE CONNECTION AT THE END OF THE FILE HERE SO YOU DO NOT LOCK YOUR DATABASE (it's fixable, but it's a pain). ###
+
+conn.close()
 
 
 ###### TESTS APPEAR BELOW THIS LINE ######
